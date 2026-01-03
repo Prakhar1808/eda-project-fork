@@ -1,9 +1,9 @@
 import pandas as pd
 
 data = {
-    "name" : ["Alice", "Bob", "Charlie"],
-    "age" : [25, 30, 35],
-    "city" : ["New York", "Los Angeles", "Chicago"]
+    "name" : ["Alice", "Bob", "Charlie" , "David" , "Eva"],
+    "age" : [25, 30, 35 , 18, 22],
+    "city" : ["New York", "Los Angeles", "Chicago" , "Houston" , "Phoenix"]
 }
 
 df = pd.DataFrame(data)
@@ -17,3 +17,6 @@ df.tail(2)  # display last 2 rows of data
 print (df.head(2))
 print("---------------")
 print (df.tail(2))
+
+print(df['name'])
+print(df[df['age'] > 25])  # to print rows where age is greater than 25
