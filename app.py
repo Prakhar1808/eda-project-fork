@@ -1,103 +1,107 @@
+# app.py
 import streamlit as st
 import sys
 import os
+# Add the path to your module
+sys.path.append('Prakhar/converted_scripts/dataVisualization')
 
-# Add the prakhar folder to Python path so we can import from it
-sys.path.append(os.path.join(os.path.dirname(__file__), 'prakhar/converted_scripts/dataVisualization'))
-
-# Now import your friend's EDA functions
+# Import your new modular functions
 try:
-    from eda import *  # Import all functions from eda.py
-    # OR import specific functions if you know them:
-    # from eda import plot_distribution, plot_correlation, generate_summary
+    import eda_functions as eda
 except ImportError as e:
-    st.error(f"Import error: {e}. Check the file path.")
+    st.error(f"Could not import module: {e}")
     st.stop()
 
-# App title
-st.title("📊 EDA Dashboard")
-st.markdown("Interactive interface for exploratory data analysis")
+st.set_page_config(layout="wide")
+st.title("📊 Instagram Usage & Lifestyle Dashboard")
 
-# 1. FILE UPLOADER
-uploaded_file = st.file_uploader("Upload your dataset (CSV or Excel)", type=['csv', 'xlsx'])
-
-if uploaded_file is not None:
-    # Load data based on file type
-    import pandas as pd
-    if uploaded_file.name.endswith('.csv'):
-        df = pd.read_csv(uploaded_file)
+# --- Sidebar for Controls ---
+with st.sidebar:
+    st.header("Data Input")
+    # Option A: File Uploader
+    uploaded_file = st.file_uploader("Upload your CSV", type=['csv'])
+    
+    # Option B: Use the original file (you'll need to adjust the path for Linux)
+    use_sample = st.checkbox("Use sample dataset path")
+    
+    if use_sample:
+        # You MUST update this path to point to your actual CSV file on Arch Linux
+        file_path = "/home/prakhar/Documents/GitHub/eda-project-fork/instagram_users_lifestyle.csv"
     else:
-        df = pd.read_excel(uploaded_file)
-    
-    st.success(f"✅ Loaded {uploaded_file.name} with {df.shape[0]} rows and {df.shape[1]} columns")
-    
-    # 2. DATA PREVIEW
-    st.subheader("Data Preview")
-    show_preview = st.checkbox("Show first 10 rows", value=True)
-    if show_preview:
-        st.dataframe(df.head(10))
-    
-    # 3. COLUMN SELECTOR FOR ANALYSIS
-    st.subheader("Column Selection")
-    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
-    categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        if numeric_cols:
-            selected_num = st.multiselect("Numeric columns for analysis:", numeric_cols, default=numeric_cols[:2])
-    with col2:
-        if categorical_cols:
-            selected_cat = st.selectbox("Categorical column (for grouping):", ['None'] + categorical_cols)
-    
-    # 4. ANALYSIS CONTROLS
-    st.subheader("Analysis Controls")
-    
-    # You'll need to know what functions are available in eda.py
-    # Example: if eda.py has a function plot_histogram(data, column)
-    if st.button("Run Basic EDA", type="primary"):
-        st.info("Running analysis...")
-        
-        # Call functions from eda.py
-        try:
-            # Example 1: Show basic statistics
-            st.write("### Basic Statistics")
-            st.write(df[selected_num].describe() if selected_num else df.describe())
-            
-            # Example 2: Create visualizations
-            # If eda.py has a plot_distribution function:
-            # fig = plot_distribution(df, selected_num[0])
-            # st.pyplot(fig)
-            
-            # For now, show a sample plot using Streamlit
-            if selected_num:
-                st.write("### Distribution Plot")
-                st.bar_chart(df[selected_num[:2]])  # Simple placeholder
-                
-        except Exception as e:
-            st.error(f"Analysis error: {e}")
-    
-    # 5. DOWNLOAD OPTIONS
-    st.subheader("Export Results")
-    if st.button("Generate Report"):
-        # You can create a summary report here
-        st.download_button(
-            label="Download Summary",
-            data=df.describe().to_csv(),
-            file_name="eda_summary.csv",
-            mime="text/csv"
-        )
+        file_path = None
 
+# --- Load Data ---
+df = None
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    st.sidebar.success(f"Uploaded: {uploaded_file.name}")
+elif use_sample and os.path.exists(file_path):
+    df = eda.load_data(file_path)  # Use our function
+    st.sidebar.info("Using sample dataset.")
 else:
-    st.info("👆 Please upload a dataset to begin analysis")
-    # Show sample option
-    if st.button("Use sample data for testing"):
-        # Load sample data
-        import pandas as pd
-        df = pd.DataFrame({
-            'A': range(100),
-            'B': range(100, 200),
-            'category': ['X', 'Y'] * 50
-        })
-        st.session_state['df'] = df
-        st.rerun()
+    st.info("👈 Please upload a CSV file or select the sample dataset to begin.")
+    st.stop()
+
+# --- Main Dashboard Tabs ---
+tab1, tab2, tab3 = st.tabs(["Data Overview", "Visualizations", "Correlations"])
+
+with tab1:
+    st.header("Dataset Overview")
+    if st.button("Show Basic Information"):
+        # Use our function
+        info_text = eda.get_basic_info(df)
+        st.text_area("Data Info", info_text, height=400)
+    
+    st.subheader("Interactive Data Preview")
+    num_rows = st.slider("Rows to show", 5, 50, 10)
+    st.dataframe(df.head(num_rows), use_container_width=True)
+
+with tab2:
+    st.header("Visualizations")
+    # Use selectbox to choose which plot to show
+    plot_choice = st.selectbox(
+        "Choose a visualization:",
+        [
+            "Daily Activity Distribution",
+            "Activity by Gender",
+            "Reels Watched by Activity",
+            "Activity by Employment",
+            # ... add all other plot names
+        ]
+    )
+    
+    if plot_choice == "Daily Activity Distribution":
+        fig = eda.plot_activity_distribution(df)
+        if fig:
+            st.pyplot(fig)
+        else:
+            st.warning("Required columns not found in data.")
+    elif plot_choice == "Activity by Gender":
+        fig = eda.plot_activity_by_gender(df)
+        if fig:
+            st.pyplot(fig)
+        else:
+            st.warning("Required columns not found in data.")
+    # ... add more elif blocks for each plot
+
+with tab3:
+    st.header("Feature Correlations")
+    if st.button("Generate Correlation Heatmap"):
+        fig = eda.plot_correlation_matrix(df)
+        if fig:
+            st.pyplot(fig)
+        else:
+            st.warning("Not enough numeric columns for correlation.")
+
+# --- Bonus: Download Processed Data ---
+st.sidebar.divider()
+st.sidebar.header("Export")
+if st.sidebar.button("Prepare Data for Download"):
+    # Example: Save the dataframe with the new 'activity_bin' column
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.sidebar.download_button(
+        label="Download CSV",
+        data=csv,
+        file_name="processed_instagram_data.csv",
+        mime="text/csv",
+    )
