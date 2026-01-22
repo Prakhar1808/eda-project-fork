@@ -2,6 +2,9 @@
 import streamlit as st
 import sys
 import os
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 # Add the path to your module
 sys.path.append('Prakhar/converted_scripts/dataVisualization')
 
